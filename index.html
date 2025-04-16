@@ -104,18 +104,19 @@
   const quoteDate = document.getElementById('quote-date');
   const whatsappNum = document.getElementById('whatsapp-number');
 
-  // Carga automática del CSV al inicio
+  // Al iniciar, parsear el CSV directamente
   document.addEventListener('DOMContentLoaded', () => {
     Papa.parse('Lista estandar Raul.csv', {
       download: true,
       header: true,
       dynamicTyping: true,
-      transformHeader: h => h.trim(),
+      transformHeader: h => h.trim().toLowerCase(),
       complete: res => {
+        console.log('Encabezados CSV:', Object.keys(res.data[0] || {}));
         products = res.data.map(r => ({
-          'Clave MPRO': r['producto']?.toString().trim() || '',
-          'Descripción': r['Descripción']?.trim() || '',
-          'Precio Neto': parseFloat(String(r['Precio']).replace(/,/g, '')) || 0
+          'Clave MPRO': (r['producto'] || r['clave mpro'] || '').toString().trim(),
+          'Descripción': (r['descripcion'] || r['descripción'] || '').trim(),
+          'Precio Neto': parseFloat(String(r['precio neto'] || r['precio']).replace(/,/g, '')) || 0
         }));
         filtered = [...products];
         setupApp();
@@ -124,7 +125,6 @@
   });
 
   function setupApp() {
-    // habilitar filtros y controles
     [filterClave, filterDesc, prevBtn, nextBtn, priceLevel, sendBtn, pdfBtn].forEach(el => el.disabled = false);
     filterClave.addEventListener('input', applyFilters);
     filterDesc.addEventListener('input', applyFilters);
@@ -141,8 +141,8 @@
     const c = filterClave.value.toLowerCase();
     const d = filterDesc.value.toLowerCase();
     filtered = products.filter(p =>
-      p['Clave MPRO'].toString().includes(c) &&
-      (p['Descripción'] || '').toLowerCase().includes(d)
+      p['Clave MPRO'].toLowerCase().includes(c) &&
+      p['Descripción'].toLowerCase().includes(d)
     );
     renderTable(); updatePagination();
   }
@@ -153,8 +153,7 @@
 
   function renderTable() {
     const tbody = document.getElementById('products-body'); tbody.innerHTML = '';
-    const start = (currentPage - 1) * pageSize;
-    filtered.slice(start, start + pageSize).forEach(p => {
+    filtered.slice((currentPage-1)*pageSize, currentPage*pageSize).forEach(p => {
       const qtyId = `qty-${p['Clave MPRO']}`;
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -178,7 +177,7 @@
   function changePage(delta) { currentPage += delta; renderTable(); updatePagination(); }
 
   function addToQuote(clave) {
-    const prod = products.find(p => p['Clave MPRO'].toString() === clave);
+    const prod = products.find(p => p['Clave MPRO'] === clave);
     const qty = parseInt(document.getElementById(`qty-${clave}`).value) || 1;
     const existing = quote.find(i => i.producto['Clave MPRO'] === prod['Clave MPRO']);
     existing ? existing.qty += qty : quote.push({ producto: prod, qty });
@@ -193,7 +192,7 @@
     const tbody = document.getElementById('quote-body'); tbody.innerHTML = '';
     let subtotal = 0;
     quote.forEach(item => {
-      const unit = item.producto['Precio Neto'] * (1 - discountPercent / 100);
+      const unit = item.producto['Precio Neto'] * (1 - discountPercent/100);
       const line = unit * item.qty; subtotal += line;
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -214,8 +213,19 @@
     const num = whatsappNum.value.replace(/\D+/g, ''); if (!num || !quote.length) return;
     const cli = clientName.value || 'Cliente'; const dt = quoteDate.value; const lvl = priceLevel.options[priceLevel.selectedIndex].text;
     let msg = `Cotización TPS\nCliente: ${cli}\nFecha: ${dt}\nNivel: ${lvl}\n----------------\n`;
-    quote.forEach(it => {
-      const unit = it.producto['Precio Neto'] * (1 - discountPercent/100);
-      msg += `${it.qty} x ${it.producto['Descripción']} (${it.producto['Clave MPRO']}) @ $${formatMoney(unit)}\n`;
-    });
-    msg += `----------------\nSubtotal: $${document.getElementById('quote-subtotal').textContent}\nIVA: $${document.getElementById('quote-iva').textContent}\nTotal: $${document.getElementById('quote
+    quote.forEach(it => { const unit = it.producto['Precio Neto'] * (1 - discountPercent/100); msg += `${it.qty} x ${it.producto['Descripción']} (${it.producto['Clave MPRO']}) @ $${formatMoney(unit)}\n`; });
+    msg += `----------------\nSubtotal: $${document.getElementById('quote-subtotal').textContent}\nIVA: $${document.getElementById('quote-iva').textContent}\nTotal: $${document.getElementById('quote-total').textContent}`;
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  function generatePDF() {
+    const element = document.getElementById('quotation-container');
+    html2pdf().from(element)
+      .set({ margin:0.5, filename: `Cotización_${clientName.value||'Cliente'}_${quoteDate.value}.pdf` })
+      .outputPdf('blob')
+      .then(blob => { const url = URL.createObjectURL(blob); window.open(url, '_blank'); })
+      .catch(err => console.error('Error generando PDF:', err));
+  }
+</script>
+</body>
+</html>
