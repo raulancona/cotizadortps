@@ -85,6 +85,21 @@
           </div>
         </div>
         <!-- UI botones -->
+        <!-- Datos del cliente (UI) -->
+        <div class="mb-4 space-y-2 text-xs sm:text-sm">
+          <input id="client-name" type="text" placeholder="Nombre del cliente" class="border p-2 rounded w-full" />
+          <input id="quote-date" type="date" class="border p-2 rounded w-full" />
+          <input id="whatsapp-number" type="tel" placeholder="WhatsApp (521...)" class="border p-2 rounded w-full" />
+        </div>
+        <!-- Nivel de precio (UI) -->
+        <div class="mb-4 text-sm">
+          <label for="price-level" class="font-semibold mr-2">Nivel de precio:</label>
+          <select id="price-level" class="border p-2 rounded text-sm">
+            <option value="0">Público</option>
+            <option value="15">Sub-distribuidor (-15%)</option>
+            <option value="20">Distribuidor (-20%)</option>
+          </select>
+        </div>
         <div class="flex space-x-2">
           <button id="send-whatsapp" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm">Enviar WhatsApp</button>
           <button id="generate-pdf" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm">Generar PDF</button>
