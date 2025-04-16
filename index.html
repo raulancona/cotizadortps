@@ -22,12 +22,9 @@
       <!-- Catálogo -->
       <div class="lg:col-span-2 bg-white p-4 sm:p-6 rounded shadow">
         <h1 class="text-xl sm:text-2xl font-bold mb-4">Catálogo de Productos</h1>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <input id="filter-clave" type="text" placeholder="Filtrar por Clave" class="border p-2 rounded text-sm" disabled />
           <input id="filter-descripcion" type="text" placeholder="Filtrar por Descripción" class="border p-2 rounded text-sm" disabled />
-          <select id="filter-categoria" class="border p-2 rounded text-sm" disabled>
-            <option value="">Todas las categorías</option>
-          </select>
         </div>
         <div class="overflow-x-auto rounded border">
           <table class="min-w-full table-auto text-xs sm:text-sm">
@@ -35,7 +32,6 @@
               <tr>
                 <th class="px-2 sm:px-4 py-2">Clave</th>
                 <th class="px-2 sm:px-4 py-2">Descripción</th>
-                <th class="px-2 sm:px-4 py-2">Categoría</th>
                 <th class="px-2 sm:px-4 py-2">Precio</th>
                 <th class="px-2 sm:px-4 py-2">Cant.</th>
                 <th class="px-2 sm:px-4 py-2">Añadir</th>
@@ -50,22 +46,20 @@
           <button id="next-page" class="px-3 py-1 bg-gray-300 rounded" disabled>Siguiente</button>
         </div>
       </div>
+
       <!-- Cotización -->
       <div class="bg-white p-4 sm:p-6 rounded shadow flex flex-col lg:sticky lg:top-4 lg:h-max" id="quotation-container">
-        <!-- PDF header para la cotización -->
         <div id="pdf-content">
           <div class="pdf-header">
             <h1>Tecnología en Pinturas TPS</h1>
             <p>RFC: TPS030405175 | +52 (999) 156 43 42</p>
             <p>tecnologiaenpinturas.com.mx</p>
           </div>
-          <!-- Datos del cliente -->
           <div class="pdf-client text-sm">
             <p><strong>Cliente:</strong> <span id="pdf-client-name"></span></p>
             <p><strong>Fecha:</strong> <span id="pdf-client-date"></span></p>
             <p><strong>WhatsApp:</strong> <span id="pdf-client-whatsapp"></span></p>
           </div>
-          <!-- Tabla de cotización para PDF -->
           <table class="pdf-table">
             <thead>
               <tr>
@@ -84,14 +78,11 @@
             <p><strong>Total:</strong> $<span id="pdf-total"></span></p>
           </div>
         </div>
-        <!-- UI botones -->
-        <!-- Datos del cliente (UI) -->
         <div class="mb-4 space-y-2 text-xs sm:text-sm">
           <input id="client-name" type="text" placeholder="Nombre del cliente" class="border p-2 rounded w-full" />
           <input id="quote-date" type="date" class="border p-2 rounded w-full" />
           <input id="whatsapp-number" type="tel" placeholder="WhatsApp (521...)" class="border p-2 rounded w-full" />
         </div>
-        <!-- Nivel de precio (UI) -->
         <div class="mb-4 text-sm">
           <label for="price-level" class="font-semibold mr-2">Nivel de precio:</label>
           <select id="price-level" class="border p-2 rounded text-sm">
@@ -112,10 +103,9 @@
   let products = [], filtered = [], quote = [];
   const pageSize = 10;
   let currentPage = 1, discountPercent = 0;
-  // Elementos
+
   const filterClave = document.getElementById('filter-clave');
   const filterDesc = document.getElementById('filter-descripcion');
-  const filterCat = document.getElementById('filter-categoria');
   const prevBtn = document.getElementById('prev-page');
   const nextBtn = document.getElementById('next-page');
   const priceLevel = document.getElementById('price-level');
@@ -127,66 +117,139 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     Papa.parse(encodeURI('Lista estandar Raul.csv'), {
-      download: true, header: true, dynamicTyping: true,
+      download: true,
+      header: true,
+      dynamicTyping: true,
       transformHeader: h => h.trim().toLowerCase(),
       complete: res => {
-        // Mapear categoría si existe
         products = res.data.map(r => ({
-          'Clave MPRO': r['producto'] || r['clave mpro'] || '',
-          'Descripción': r['descripcion'] || r['descripción'] || '',
-          'Categoria': r['categoria'] || '',
-          'Precio Neto': parseFloat(r['precio neto']||r['precio']) || 0
+          'Clave MPRO': (r['producto'] || r['clave mpro'] || '').toString().trim(),
+          'Descripción': (r['descripcion'] || r['descripción'] || '').trim(),
+          'Precio Neto': parseFloat(String(r['precio neto'] || r['precio']).replace(/,/g, '')) || 0
         }));
-        // Llenar dropdown de categorías
-        const cats = [...new Set(products.map(p=>p.Categoria).filter(c=>c))];
-        cats.forEach(c => filterCat.appendChild(Object.assign(document.createElement('option'), { value:c, textContent:c })));
-        [filterClave, filterDesc, filterCat, prevBtn, nextBtn, priceLevel, sendBtn, pdfBtn].forEach(el=>el.disabled=false);
-        filterClave.addEventListener('input', applyFilters);
-        filterDesc.addEventListener('input', applyFilters);
-        filterCat.addEventListener('change', applyFilters);
-        prevBtn.addEventListener('click', ()=>changePage(-1));
-        nextBtn.addEventListener('click', ()=>changePage(1));
-        priceLevel.addEventListener('change', ()=>renderQuote());
-        sendBtn.addEventListener('click', sendWhatsApp);
-        pdfBtn.addEventListener('click', generatePDF);
-        filtered = [...products]; renderTable(); updatePagination();
+        filtered = [...products];
+        setupApp();
       }
     });
   });
 
-  function applyFilters(){
-    currentPage=1;
-    const c=filterClave.value.toLowerCase(), d=filterDesc.value.toLowerCase(), t=filterCat.value;
-    filtered=products.filter(p=>
-      p['Clave MPRO'].toLowerCase().includes(c) &&
-      p['Descripción'].toLowerCase().includes(d) &&
-      (!t||p.Categoria===t)
-    );renderTable();updatePagination();
+  function setupApp() {
+    filterClave.disabled = filterDesc.disabled = prevBtn.disabled = nextBtn.disabled = priceLevel.disabled = sendBtn.disabled = pdfBtn.disabled = false;
+    filterClave.addEventListener('input', applyFilters);
+    filterDesc.addEventListener('input', applyFilters);
+    prevBtn.addEventListener('click', () => changePage(-1));
+    nextBtn.addEventListener('click', () => changePage(1));
+    priceLevel.addEventListener('change', () => renderQuote());
+    sendBtn.addEventListener('click', sendWhatsApp);
+    pdfBtn.addEventListener('click', generatePDF);
+    renderTable(); updatePagination();
   }
-  function formatMoney(v){return v.toLocaleString('es-MX',{minimumFractionDigits:2});}
-  function renderTable(){const tb=document.getElementById('products-body');tb.innerHTML='';filtered.slice((currentPage-1)*pageSize,currentPage*pageSize).forEach(p=>{const id=`qty-${p['Clave MPRO']}`;const tr=document.createElement('tr');tr.innerHTML=`<td class="border px-2 py-1">${p['Clave MPRO']}</td><td class="border px-2 py-1">${p['Descripción']}</td><td class="border px-2 py-1">${p.Categoria}</td><td class="border px-2 py-1 text-right">$${formatMoney(p['Precio Neto'])}</td><td class="border px-2 py-1"><input id="${id}" type="number" min="1" value="1" class="w-12 p-1 border rounded text-xs"/></td><td class="border px-2 py-1 text-center"><button onclick="addToQuote('${p['Clave MPRO']}')" class="px-2 py-1 bg-green-500 text-white rounded text-xs">+</button></td>`;tb.appendChild(tr);});}
-  function updatePagination(){const tp=Math.ceil(filtered.length/pageSize)||1;document.getElementById('page-info').textContent=`Página ${currentPage} de ${tp}`;prevBtn.disabled=currentPage===1;nextBtn.disabled=currentPage===tp;}
-  function changePage(d){currentPage+=d;renderTable();updatePagination();}
-  function addToQuote(cl){const pr=products.find(p=>p['Clave MPRO']===cl);const q=parseInt(document.getElementById(`qty-${cl}`).value)||1;const ex=quote.find(i=>i.producto['Clave MPRO']===cl);ex?ex.qty+=q:quote.push({producto:pr,qty:q});renderQuote();}
-  function removeFromQuote(cl){quote=quote.filter(i=>i.producto['Clave MPRO']!==cl);renderQuote();}
-  function updateQuoteQty(cl,v){const it=quote.find(i=>i.producto['Clave MPRO']===cl);if(it){it.qty=parseInt(v)||1;renderQuote();}}
 
-  function renderQuote(){const tb=document.getElementById('quote-body');tb.innerHTML='';let sub=0;quote.forEach(it=>{const unit=it.producto['Precio Neto']*(1-discountPercent/100), line=unit*it.qty;sub+=line;tb.innerHTML+=`<tr><td class="border px-2 py-1">${it.producto['Clave MPRO']}</td><td class="border px-2 py-1 text-center"><input type="number" min="1" value="${it.qty}" class="w-12 p-1 border rounded text-xs mx-auto" onchange="updateQuoteQty('${it.producto['Clave MPRO']}',this.value)"/></td><td class="border px-2 py-1 text-right">$${formatMoney(line)}</td><td class="border px-2 py-1 text-center"><button onclick="removeFromQuote('${it.producto['Clave MPRO']}')" class="px-1 py-0.5 bg-red-600 text-white rounded text-xs">x</button></td></tr>`;});const iva=sub*IVA_RATE, tot=sub+iva;document.getElementById('quote-subtotal').textContent=formatMoney(sub);document.getElementById('quote-iva').textContent=formatMoney(iva);document.getElementById('quote-total').textContent=formatMoney(tot);}
+  function applyFilters() {
+    currentPage = 1;
+    const c = filterClave.value.toLowerCase();
+    const d = filterDesc.value.toLowerCase();
+    filtered = products.filter(p =>
+      p['Clave MPRO'].toLowerCase().includes(c) &&
+      p['Descripción'].toLowerCase().includes(d)
+    );
+    renderTable(); updatePagination();
+  }
 
-  function sendWhatsApp(){const num=whatsappNum.value.replace(/\D+/g,''),cli=clientName.value||'Cliente',dt=quoteDate.value,lvl=priceLevel.value;if(!num||!quote.length)return;let msg=`Cotización TPS\nCliente: ${cli}\nFecha: ${dt}\nNivel: ${priceLevel.options[priceLevel.selectedIndex].text}\n----------------\n`;quote.forEach(it=>{const unit=it.producto['Precio Neto']*(1-discountPercent/100);msg+=`${it.qty} x ${it.producto['Descripción']} (${it.producto['Clave MPRO']}) @ $${formatMoney(unit)}\n`;});msg+=`----------------\nSubtotal: $${document.getElementById('quote-subtotal').textContent}\nIVA: $${document.getElementById('quote-iva').textContent}\nTotal: $${document.getElementById('quote-total').textContent}`;window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`,'_blank');}
+  function formatMoney(val) {
+    return val.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  }
 
-  function generatePDF(){
-    // llenar datos PDF
+  function renderTable() {
+    const tbody = document.getElementById('products-body'); tbody.innerHTML = '';
+    const start = (currentPage - 1) * pageSize;
+    filtered.slice(start, start + pageSize).forEach(p => {
+      const qtyId = `qty-${p['Clave MPRO']}`;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="border px-2 py-1 text-xs sm:text-sm">${p['Clave MPRO']}</td>
+        <td class="border px-2 py-1 text-xs sm:text-sm">${p['Descripción']}</td>
+        <td class="border px-2 py-1 text-xs sm:text-sm text-right">$${formatMoney(p['Precio Neto'])}</td>
+        <td class="border px-2 py-1 text-xs sm:text-sm"><input id="${qtyId}" type="number" min="1" value="1" class="w-12 p-1 border rounded text-xs" /></td>
+        <td class="border px-2 py-1 text-xs sm:text-sm text-center"><button onclick="addToQuote('${p['Clave MPRO']}')" class="px-2 py-1 bg-green-500 text-white rounded text-xs">+</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updatePagination() {
+    const total = Math.ceil(filtered.length / pageSize) || 1;
+    document.getElementById('page-info').textContent = `Página ${currentPage} de ${total}`;
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = currentPage === total;
+  }
+
+  function changePage(delta) { currentPage += delta; renderTable(); updatePagination(); }
+
+  function addToQuote(code) {
+    const prod = products.find(p => p['Clave MPRO'] === code);
+    const qty = parseInt(document.getElementById(`qty-${code}`).value) || 1;
+    const existing = quote.find(i => i.producto['Clave MPRO'] === code);
+    existing ? existing.qty += qty : quote.push({ producto: prod, qty });
+    renderQuote();
+  }
+
+  function removeFromQuote(code) { quote = quote.filter(i => i.producto['Clave MPRO'] !== code); renderQuote(); }
+
+  function renderQuote() {
+    const tbody = document.getElementById('quote-body'); tbody.innerHTML = '';
+    let subtotal = 0;
+    quote.forEach(item => {
+      const unit = item.producto['Precio Neto'] * (1 - discountPercent / 100);
+      const line = unit * item.qty;
+      subtotal += line;
+      tbody.innerHTML += `
+        <tr>
+          <td class="border px-2 py-1 text-xs sm:text-sm">${item.producto['Clave MPRO']}</td>
+          <td class="border px-2 py-1 text-xs sm:text-sm text-center"><input type="number" min="1" value="${item.qty}" class="w-12 p-1 border rounded text-xs mx-auto" onchange="updateQuoteQty('${item.producto['Clave MPRO']}', this.value)"/></td>
+          <td class="border px-2 py-1 text-xs sm:text-sm text-right">$${formatMoney(line)}</td>
+          <td class="border px-2 py-1 text-xs sm:text-sm text-center"><button onclick="removeFromQuote('${item.producto['Clave MPRO']}')" class="px-1 py-0.5 bg-red-600 text-white rounded text-xs">x</button></td>
+        </tr>`;
+    });
+    const iva = subtotal * IVA_RATE;
+    const total = subtotal + iva;
+    document.getElementById('quote-subtotal').textContent = formatMoney(subtotal);
+    document.getElementById('quote-iva').textContent = formatMoney(iva);
+    document.getElementById('quote-total').textContent = formatMoney(total);
+  }
+
+  function sendWhatsApp() {
+    const num = whatsappNum.value.replace(/\D+/g, '');
+    if (!num || !quote.length) return;
+    const cli = clientName.value || 'Cliente';
+    const dt = quoteDate.value;
+    const lvl = priceLevel.options[priceLevel.selectedIndex].text;
+    let msg = `Cotización TPS\nCliente: ${cli}\nFecha: ${dt}\nNivel: ${lvl}\n----------------\n`;
+    quote.forEach(it => {
+      const unit = it.producto['Precio Neto'] * (1 - discountPercent / 100);
+      msg += `${it.qty} x ${it.producto['Descripción']} (${it.producto['Clave MPRO']}) @ $${formatMoney(unit)}\n`;
+    });
+    msg += `----------------\nSubtotal: $${document.getElementById('quote-subtotal').textContent}\nIVA: $${document.getElementById('quote-iva').textContent}\nTotal: $${document.getElementById('quote-total').textContent}`;
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  function generatePDF() {
     document.getElementById('pdf-client-name').textContent = clientName.value;
     document.getElementById('pdf-client-date').textContent = quoteDate.value;
     document.getElementById('pdf-client-whatsapp').textContent = whatsappNum.value;
     const pb = document.getElementById('pdf-quote-body'); pb.innerHTML = '';
-    let sub=0;
-    quote.forEach(it=>{const unit=it.producto['Precio Neto']*(1-discountPercent/100), line=unit*it.qty; sub+=line; pb.innerHTML+=`<tr><td>${it.producto['Clave MPRO']}</td><td>${it.producto['Descripción']}</td><td>${it.qty}</td><td>$${formatMoney(unit)}</td><td>$${formatMoney(line)}</td></tr>`;});
-    const iva=sub*IVA_RATE, tot=sub+iva;
+    let sub = 0;
+    quote.forEach(it => {
+      const unit = it.producto['Precio Neto'] * (1 - discountPercent / 100);
+      const line = unit * it.qty;
+      sub += line;
+      pb.innerHTML += `<tr><td>${it.producto['Clave MPRO']}</td><td>${it.producto['Descripción']}</td><td>${it.qty}</td><td>$${formatMoney(unit)}</td><td>$${formatMoney(line)}</td></tr>`;
+    });
+    const iva = sub * IVA_RATE;
+    const total = sub + iva;
     document.getElementById('pdf-subtotal').textContent = formatMoney(sub);
     document.getElementById('pdf-iva').textContent = formatMoney(iva);
-    document.getElementById('pdf-total').textContent = formatMoney(tot);
+    document.getElementById('pdf-total').textContent = formatMoney(total);
     html2pdf().from(document.getElementById('pdf-content'))
       .set({ margin:0.5, filename:`Cotización_${clientName.value||'Cliente'}_${quoteDate.value}.pdf`, html2canvas:{scale:2} })
       .save();
