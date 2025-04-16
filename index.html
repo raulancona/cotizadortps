@@ -111,7 +111,7 @@
   const whatsappNum = document.getElementById('whatsapp-number');
 
   document.addEventListener('DOMContentLoaded', () => {
-    Papa.parse('Lista estandar Raul.csv', {
+    Papa.parse(encodeURI('Lista estandar Raul.csv'), {
       download: true, header: true, dynamicTyping: true,
       transformHeader: h => h.trim().toLowerCase(),
       complete: res => {
