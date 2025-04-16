@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cotizador TPS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+</head>
+<body class="bg-gray-100 p-4">
+  <div class="max-w-7xl mx-auto">
+    <!-- Carga de catálogo -->
+    <div class="bg-white p-4 sm:p-6 rounded shadow mb-6">
+      <label class="font-semibold mr-2">Sube tu catálogo (.csv):</label>
+      <input type="file" id="file-input" accept=".csv" />
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Catálogo -->
+      <div class="lg:col-span-2 bg-white p-4 sm:p-6 rounded shadow">
+        <h1 class="text-xl sm:text-2xl font-bold mb-4">Catálogo de Productos</h1>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          <input id="filter-clave" type="text" placeholder="Filtrar por Clave" class="border p-2 rounded text-sm" disabled />
+          <input id="filter-descripcion" type="text" placeholder="Filtrar por Descripción" class="border p-2 rounded text-sm" disabled />
+        </div>
+        <div class="overflow-x-auto rounded border">
+          <table class="min-w-full table-auto text-xs sm:text-sm">
+            <thead class="bg-blue-800 text-white">
+              <tr>
+                <th class="px-2 sm:px-4 py-2">Clave</th>
+                <th class="px-2 sm:px-4 py-2">Descripción</th>
+                <th class="px-2 sm:px-4 py-2">Precio</th>
+                <th class="px-2 sm:px-4 py-2">Cant.</th>
+                <th class="px-2 sm:px-4 py-2">Añadir</th>
+              </tr>
+            </thead>
+            <tbody id="products-body"></tbody>
+          </table>
+        </div>
+        <div id="pagination" class="mt-4 flex justify-center space-x-2 text-xs sm:text-sm">
+          <button id="prev-page" class="px-3 py-1 bg-gray-300 rounded" disabled>Anterior</button>
+          <span id="page-info" class="px-3 py-1"></span>
+          <button id="next-page" class="px-3 py-1 bg-gray-300 rounded" disabled>Siguiente</button>
+        </div>
+      </div>
+
+      <!-- Cotización -->
+      <div class="bg-white p-4 sm:p-6 rounded shadow flex flex-col lg:sticky lg:top-4 lg:h-max" id="quotation-container">
+        <h2 class="text-lg sm:text-xl font-bold mb-4">Resumen de Cotización</h2>
+        <div class="mb-4 text-sm">
+          <label for="price-level" class="font-semibold mr-2">Nivel de precio:</label>
+          <select id="price-level" class="border p-2 rounded text-sm" disabled>
+            <option value="0">Público</option>
+            <option value="15">Sub-distribuidor (-15%)</option>
+            <option value="20">Distribuidor (-20%)</option>
+          </select>
+        </div>
+        <div class="overflow-y-auto max-h-60 sm:max-h-72 text-xs sm:text-sm border rounded">
+          <table class="min-w-full table-auto">
+            <thead class="bg-gray-200 sticky top-0 text-[11px] sm:text-xs">
+              <tr>
+                <th class="px-1 sm:px-2 py-1">Clave</th>
+                <th class="px-1 sm:px-2 py-1">Cant.</th>
+                <th class="px-1 sm:px-2 py-1">Subtotal</th>
+                <th class="px-1 sm:px-2 py-1">Quitar</th>
+              </tr>
+            </thead>
+            <tbody id="quote-body"></tbody>
+          </table>
+        </div>
+        <div class="mt-4 text-right font-bold text-sm sm:text-base space-y-1">
+          <div>Subtotal: $<span id="quote-subtotal">0.00</span></div>
+          <div>IVA 16%: $<span id="quote-iva">0.00</span></div>
+          <div>Total: $<span id="quote-total">0.00</span></div>
+        </div>
+        <div class="mt-4 flex space-x-2">
+          <button id="send-whatsapp" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm" disabled>Enviar WhatsApp</button>
+          <button id="generate-pdf" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm" disabled>Generar PDF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const IVA_RATE = 0.16;
+  let products = [], filtered = [], quote = [];
+  const pageSize = 10;
+  let currentPage = 1, discountPercent = 0;
+
+  // Elementos
+  const fileInput = document.getElementById('file-input');
+  const filterClave = document.getElementById('filter-clave');
+  const filterDesc = document.getElementById('filter-descripcion');
+  const prevBtn = document.getElementById('prev-page');
+  const nextBtn = document.getElementById('next-page');
+  const priceLevel = document.getElementById('price-level');
+  const sendBtn = document.getElementById('send-whatsapp');
+  const pdfBtn = document.getElementById('generate-pdf');
+  const quoteDate = document.getElementById('quote-date');
+  const clientName = document.getElementById('client-name');
+  const whatsappNum = document.getElementById('whatsapp-number');
+
+  // Persistencia
+  document.addEventListener('DOMContentLoaded', () => {
+    const stored = localStorage.getItem('tpsCatalog');
+    if (stored) { products = JSON.parse(stored); setupApp(); }
+  });
+
+  // Carga de CSV
+  fileInput.addEventListener('change', e => {
+    const file = e.target.files[0]; if (!file) return;
+    Papa.parse(file, {
+      header: true,
+      dynamicTyping: true,
+      transformHeader: h => h.trim(),
+      complete: res => {
+        products = res.data.map(r => ({
+          'Clave MPRO': r['producto']?.toString().trim() || '',
+          'Descripción': r['Descripción']?.trim() || '',
+          'Precio Neto': parseFloat(String(r['Precio']).replace(/,/g, '')) || 0
+        }));
+        console.log('Productos cargados:', products.length);
+        localStorage.setItem('tpsCatalog', JSON.stringify(products));
+        setupApp();
+      }
+    });
+  });
+
+  function setupApp() {
+    filtered = [...products];
+    [filterClave, filterDesc, prevBtn, nextBtn, priceLevel, sendBtn, pdfBtn].forEach(el => el.disabled = false);
+    filterClave.addEventListener('input', applyFilters);
+    filterDesc.addEventListener('input', applyFilters);
+    prevBtn.addEventListener('click', () => changePage(-1));
+    nextBtn.addEventListener('click', () => changePage(1));
+    priceLevel.addEventListener('change', e => { discountPercent = parseFloat(e.target.value); renderQuote(); });
+    sendBtn.addEventListener('click', sendWhatsApp);
+    pdfBtn.addEventListener('click', generatePDF);
+    renderTable(); updatePagination();
+  }
+
+  function applyFilters() {
+    currentPage = 1;
+    const c = filterClave.value.toLowerCase();
+    const d = filterDesc.value.toLowerCase();
+    filtered = products.filter(p =>
+      p['Clave MPRO'].toString().includes(c) &&
+      (p['Descripción'] || '').toLowerCase().includes(d)
+    );
+    renderTable(); updatePagination();
+  }
+
+  function formatMoney(val) {
+    return val.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('products-body'); tbody.innerHTML = '';
+    const start = (currentPage - 1) * pageSize;
+    filtered.slice(start, start + pageSize).forEach(p => {
+      const qtyId = `qty-${p['Clave MPRO']}`;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="border px-2 py-1 text-xs sm:text-sm">${p['Clave MPRO']}</td>
+        <td class="border px-2 py-1 text-xs sm:text-sm">${p['Descripción']}</td>
+        <td class="border px-2 py-1 text-xs sm:text-sm text-right">$${formatMoney(p['Precio Neto'])}</td>
+        <td class="border px-2 py-1 text-xs sm:text-sm"><input id="${qtyId}" type="number" min="1" value="1" class="w-12 p-1 border rounded text-xs" /></td>
+        <td class="border px-2 py-1 text-center"><button onclick="addToQuote('${p['Clave MPRO']}')" class="px-2 py-1 bg-green-500 text-white rounded text-xs">+</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updatePagination() {
+    const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+    document.getElementById('page-info').textContent = `Página ${currentPage} de ${totalPages}`;
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = currentPage === totalPages;
+  }
+
+  function changePage(delta) { currentPage += delta; renderTable(); updatePagination(); }
+
+  function addToQuote(clave) {
+    const prod = products.find(p => p['Clave MPRO'].toString() === clave);
+    const qty = parseInt(document.getElementById(`qty-${clave}`).value) || 1;
+    const existing = quote.find(i => i.producto['Clave MPRO'] === prod['Clave MPRO']);
+    existing ? existing.qty += qty : quote.push({ producto: prod, qty });
+    renderQuote();
+  }
+
+  function removeFromQuote(clave) { quote = quote.filter(i => i.producto['Clave MPRO'] !== clave); renderQuote(); }
+
+  function updateQuoteQty(clave, val) { const itm = quote.find(i => i.producto['Clave MPRO'] === clave); if (itm) { itm.qty = parseInt(val) || 1; renderQuote(); }}
+
+  function renderQuote() {
+    const tbody = document.getElementById('quote-body'); tbody.innerHTML = '';
+    let subtotal = 0;
+    quote.forEach(item => {
+      const unit = item.producto['Precio Neto'] * (1 - discountPercent / 100);
+      const line = unit * item.qty; subtotal += line;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="border px-2 py-1 text-xs sm:text-sm">${item.producto['Clave MPRO']}</td>
+        <td class="border px-2 py-1 text-xs sm:text-sm text-center"><input type="number" min="1" value="${item.qty}" class="w-12 p-1 border rounded text-xs mx-auto" onchange="updateQuoteQty('${item.producto['Clave MPRO']}', this.value)"/></td>
+        <td class="border px-2 py-1 text-xs sm:text-sm text-right">$${formatMoney(line)}</td>
+        <td class="border px-2 py-1 text-xs sm:text-sm text-center"><button onclick="removeFromQuote('${item.producto['Clave MPRO']}')" class="px-1 py-0.5 bg-red-600 text-white rounded text-xs">x</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    const iva = subtotal * IVA_RATE; const total = subtotal + iva;
+    document.getElementById('quote-subtotal').textContent = formatMoney(subtotal);
+    document.getElementById('quote-iva').textContent = formatMoney(iva);
+    document.getElementById('quote-total').textContent = formatMoney(total);
+  }
+
+  function sendWhatsApp() {
+    const num = whatsappNum.value.replace(/\D+/g, ''); if (!num || !quote.length) return;
+    const cli = clientName.value || 'Cliente'; const dt = quoteDate.value; const lvl = priceLevel.options[priceLevel.selectedIndex].text;
+    let msg = `Cotización TPS\nCliente: ${cli}\nFecha: ${dt}\nNivel: ${lvl}\n----------------\n`;
+    quote.forEach(it => { const unit = it.producto['Precio Neto'] * (1 - discountPercent/100); msg += `${it.qty} x ${it.producto['Descripción']} (${it.producto['Clave MPRO']}) @ $${formatMoney(unit)}\n`; });
+    msg += `----------------\nSubtotal: $${document.getElementById('quote-subtotal').textContent}\nIVA: $${document.getElementById('quote-iva').textContent}\nTotal: $${document.getElementById('quote-total').textContent}`;
+    window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+
+  function generatePDF() {
+    const element = document.getElementById('quotation-container');
+    html2pdf().from(element)
+      .set({ margin:0.5, filename: `Cotización_${clientName.value||'Cliente'}_${quoteDate.value}.pdf` })
+      .outputPdf('blob')
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      })
+      .catch(err => console.error('Error generando PDF:', err));
+  }
+</script>
+</body>
+</html>
