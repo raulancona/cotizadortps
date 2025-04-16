@@ -218,13 +218,37 @@
     window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`,'_blank');
   }
 
-  function generatePDF(){
-    // Llenar datos en plantilla
-    document.getElementById('pdf-client-name').textContent=clientName.value;
-    document.getElementById('pdf-client-date').textContent=quoteDate.value;
-    document.getElementById('pdf-client-whatsapp').textContent=whatsappNum.value;
-    const pb=document.getElementById('pdf-quote-body'); pb.innerHTML=''; let sub=0;
-    quote.forEach(it=>{const u=it.producto['Precio Neto']*(1-discountPercent/100), ln=u*it.qty; sub+=ln; pb.innerHTML+=`<tr><td>${it.producto['Clave MPRO']}</td><td>${it.producto['Descripción']}</td><td>${it.qty}</td><td>$${formatMoney(u)}</td><td>$${formatMoney(ln)}</td></tr>`;});
+  function generatePDF() {
+    // Mostrar el contenido oculto para PDF
+    const pdfEl = document.getElementById('pdf-content');
+    pdfEl.classList.remove('hidden');
+    // Rellenar datos en plantilla
+    document.getElementById('pdf-client-name').textContent = clientName.value;
+    document.getElementById('pdf-client-date').textContent = quoteDate.value;
+    document.getElementById('pdf-client-whatsapp').textContent = whatsappNum.value;
+    const pb = document.getElementById('pdf-quote-body');
+    pb.innerHTML = '';
+    let sub = 0;
+    quote.forEach(it => {
+      const unit = it.producto['Precio Neto'] * (1 - discountPercent / 100);
+      const line = unit * it.qty;
+      sub += line;
+      pb.innerHTML += `<tr><td>${it.producto['Clave MPRO']}</td><td>${it.producto['Descripción']}</td><td>${it.qty}</td><td>$${formatMoney(unit)}</td><td>$${formatMoney(line)}</td></tr>`;
+    });
+    const iva = sub * IVA_RATE;
+    const tot = sub + iva;
+    document.getElementById('pdf-subtotal').textContent = formatMoney(sub);
+    document.getElementById('pdf-iva').textContent = formatMoney(iva);
+    document.getElementById('pdf-total').textContent = formatMoney(tot);
+    // Generar y descargar el PDF
+    html2pdf().from(pdfEl)
+      .set({ margin:0.5, filename:`Cotización_${clientName.value||'Cliente'}_${quoteDate.value}.pdf`, html2canvas:{scale:2} })
+      .save()
+      .finally(() => {
+        // Ocultar de nuevo el contenido
+        pdfEl.classList.add('hidden');
+      });
+}</td><td>${it.producto['Descripción']}</td><td>${it.qty}</td><td>$${formatMoney(u)}</td><td>$${formatMoney(ln)}</td></tr>`;});
     const iva=sub*IVA_RATE, tot=sub+iva;
     document.getElementById('pdf-subtotal').textContent=formatMoney(sub);
     document.getElementById('pdf-iva').textContent=formatMoney(iva);
