@@ -14,7 +14,7 @@
       <!-- Catálogo -->
       <div class="lg:col-span-2 bg-white p-4 sm:p-6 rounded shadow">
         <h1 class="text-xl sm:text-2xl font-bold mb-4">Catálogo de Productos</h1>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <div class="grid grid-cols-2 gap-4 mb-6">
           <input id="filter-clave" type="text" placeholder="Filtrar por Clave" class="border p-2 rounded text-sm" disabled />
           <input id="filter-descripcion" type="text" placeholder="Filtrar por Descripción" class="border p-2 rounded text-sm" disabled />
         </div>
@@ -22,22 +22,23 @@
           <table class="min-w-full table-auto text-xs sm:text-sm">
             <thead class="bg-blue-800 text-white">
               <tr>
-                <th class="px-2 sm:px-4 py-2">Clave</th>
-                <th class="px-2 sm:px-4 py-2">Descripción</th>
-                <th class="px-2 sm:px-4 py-2">Precio</th>
-                <th class="px-2 sm:px-4 py-2">Cant.</th>
-                <th class="px-2 sm:px-4 py-2">Añadir</th>
+                <th class="px-2 py-1">Clave</th>
+                <th class="px-2 py-1">Descripción</th>
+                <th class="px-2 py-1">Precio</th>
+                <th class="px-2 py-1">Cant.</th>
+                <th class="px-2 py-1">Añadir</th>
               </tr>
             </thead>
             <tbody id="products-body"></tbody>
           </table>
         </div>
-        <div id="pagination" class="mt-4 flex justify-center space-x-2 text-xs sm:text-sm">
+        <div class="mt-4 flex justify-center space-x-2 text-xs sm:text-sm">
           <button id="prev-page" class="px-3 py-1 bg-gray-300 rounded" disabled>Anterior</button>
           <span id="page-info" class="px-3 py-1"></span>
           <button id="next-page" class="px-3 py-1 bg-gray-300 rounded" disabled>Siguiente</button>
         </div>
       </div>
+
       <!-- Cotización -->
       <div id="quotation-container" class="bg-white p-4 sm:p-6 rounded shadow flex flex-col lg:sticky lg:top-4 lg:h-max">
         <h2 class="text-lg sm:text-xl font-bold mb-4">Resumen de Cotización</h2>
@@ -66,10 +67,15 @@
           <table class="min-w-full table-auto">
             <thead class="bg-gray-200 sticky top-0 text-[11px] sm:text-xs">
               <tr>
-                <th class="px-1 sm:px-2 py-1">Clave</th>
-                <th class="px-1 sm:px-2 py-1">Cant.</th>
-                <th class="px-1 sm:px-2 py-1">Subtotal</th>
-                <th class="px-1 sm:px-2 py-1">Quitar</th>
+                <th class="px-1 py-1">PDA</th>
+                <th class="px-1 py-1">Producto</th>
+                <th class="px-1 py-1">Descripción</th>
+                <th class="px-1 py-1">Cantidad</th>
+                <th class="px-1 py-1">U.M.</th>
+                <th class="px-1 py-1">Precio</th>
+                <th class="px-1 py-1">%Desc</th>
+                <th class="px-1 py-1">Importe</th>
+                <th class="px-1 py-1">Quitar</th>
               </tr>
             </thead>
             <tbody id="quote-body"></tbody>
@@ -90,11 +96,11 @@
     </div>
   </div>
 
-  <!-- Plantilla oculta para PDF -->
+  <!-- Plantilla PDF Oculta -->
   <div id="pdf-template" class="hidden p-4 bg-white text-[10px]" style="width:210mm; font-family:Arial, sans-serif;">
     <div class="flex justify-between mb-2">
       <img src="logo-tps.png" alt="TPS Logo" style="height:60px;" />
-      <div class="text-right text-[10px]">
+      <div class="text-right">
         <div class="text-2xl font-bold">COTIZACIÓN</div>
         Tecnología en Pinturas TPS<br>
         RFC: TPS030405175<br>
@@ -114,18 +120,18 @@
         <strong>OPERADOR:</strong> <span id="pdf-operador"></span>
       </div>
     </div>
-    <div class="mb-2 text-[9px]"><strong>COMENTARIO:</strong> <span id="pdf-comentario"></span></div>
+    <div class="mb-2"><strong>COMENTARIO:</strong> <span id="pdf-comentario"></span></div>
     <table class="w-full border-collapse mb-2 text-[9px]">
       <thead class="bg-gray-200">
         <tr>
           <th class="border px-1 py-1">PDA</th>
-          <th class="border px-1 py-1">PRODUCTO</th>
-          <th class="border px-1 py-1">DESCRIPCIÓN</th>
-          <th class="border px-1 py-1">CANTIDAD</th>
+          <th class="border px-1 py-1">Producto</th>
+          <th class="border px-1 py-1">Descripción</th>
+          <th class="border px-1 py-1">Cantidad</th>
           <th class="border px-1 py-1">U.M.</th>
-          <th class="border px-1 py-1">PRECIO</th>
-          <th class="border px-1 py-1">%DESC</th>
-          <th class="border px-1 py-1">IMPORTE</th>
+          <th class="border px-1 py-1">Precio</th>
+          <th class="border px-1 py-1">%Desc</th>
+          <th class="border px-1 py-1">Importe</th>
         </tr>
       </thead>
       <tbody id="pdf-rows"></tbody>
@@ -154,42 +160,69 @@
     let currentPage = 1, discountPercent = 0;
 
     document.addEventListener('DOMContentLoaded', () => {
-      Papa.parse('Lista estandar Raul.csv',{ download:true,header:true,dynamicTyping:true,transformHeader:h=>h.trim().toLowerCase(),complete:res=>{
-        products = res.data.map(r=>({ 'Clave MPRO':(r['producto']||r['clave mpro']||'').trim(), 'Descripción':(r['descripcion']||r['descripción']||'').trim(), 'Precio Neto':parseFloat(String(r['precio neto']||r['precio']).replace(/,/g,''))||0 }));
-        filtered=[...products]; setupApp(); }});
+      Papa.parse(encodeURI('Lista estandar Raul.csv'), {
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        transformHeader: h => h.trim().toLowerCase(),
+        error: err => console.error('Error al cargar CSV:', err),
+        complete: res => {
+          console.log('Productos cargados:', res.data.length);
+          products = res.data.map(r => ({
+            'Clave MPRO': (r['producto'] || r['clave mpro'] || '').trim(),
+            'Descripción': (r['descripcion'] || r['descripción'] || '').trim(),
+            'Precio Neto': parseFloat(String(r['precio neto'] || r['precio']).replace(/,/g, '')) || 0
+          }));
+          filtered = [...products];
+          setupApp();
+        }
+      });
     });
 
-    function setupApp(){
-      ['filter-clave','filter-descripcion','prev-page','next-page'].forEach(id=>document.getElementById(id).disabled=false);
-      document.getElementById('send-whatsapp').disabled=false;
-      document.getElementById('generate-pdf').disabled=false;
-      document.getElementById('filter-clave').addEventListener('input',applyFilters);
-      document.getElementById('filter-descripcion').addEventListener('input',applyFilters);
-      document.getElementById('prev-page').addEventListener('click',()=>changePage(-1));
-      document.getElementById('next-page').addEventListener('click',()=>changePage(1));
-      document.getElementById('price-level').addEventListener('change',e=>{discountPercent=parseFloat(e.target.value);renderQuote();});
-      document.getElementById('send-whatsapp').addEventListener('click',sendWhatsApp);
-      document.getElementById('generate-pdf').addEventListener('click',generatePDF);
-      renderTable(); updatePagination();
+    function setupApp() {
+      ['filter-clave','filter-descripcion','prev-page','next-page'].forEach(id => document.getElementById(id).disabled = false);
+      document.getElementById('send-whatsapp').disabled     = false;
+      document.getElementById('generate-pdf').disabled      = false;
+
+      document.getElementById('filter-clave').addEventListener('input', applyFilters);
+      document.getElementById('filter-descripcion').addEventListener('input', applyFilters);
+      document.getElementById('prev-page').addEventListener('click', () => changePage(-1));
+      document.getElementById('next-page').addEventListener('click', () => changePage(1));
+      document.getElementById('price-level').addEventListener('change', e => { discountPercent = parseFloat(e.target.value); renderQuote(); });
+      document.getElementById('send-whatsapp').addEventListener('click', sendWhatsApp);
+      document.getElementById('generate-pdf').addEventListener('click', generatePDF);
+
+      renderTable();
+      updatePagination();
     }
 
-    function applyFilters(){ currentPage=1; const c=document.getElementById('filter-clave').value.toLowerCase(), d=document.getElementById('filter-descripcion').value.toLowerCase(); filtered=products.filter(p=>p['Clave MPRO'].toLowerCase().includes(c)&&p['Descripción'].toLowerCase().includes(d)); renderTable(); updatePagination(); }
+    function applyFilters() {
+      currentPage = 1;
+      const c = document.getElementById('filter-clave').value.toLowerCase();
+      const d = document.getElementById('filter-descripcion').value.toLowerCase();
+      filtered = products.filter(p =>
+        p['Clave MPRO'].toLowerCase().includes(c) &&
+        p['Descripción'].toLowerCase().includes(d)
+      );
+      renderTable();
+      updatePagination();
+    }
 
-    function formatMoney(v){ return v.toLocaleString('es-MX',{minimumFractionDigits:2}); }
+    function formatMoney(v) {
+      return v.toLocaleString('es-MX', { minimumFractionDigits: 2 });
+    }
 
-    function renderTable(){ const tb=document.getElementById('products-body'); tb.innerHTML=''; filtered.slice((currentPage-1)*pageSize,currentPage*pageSize).forEach(p=>{ const qtyId=`qty-${p['Clave MPRO']}`; const tr=document.createElement('tr'); tr.innerHTML=`<td class="border px-2 py-1 text-xs sm:text-sm">${p['Clave MPRO']}</td><td class="border px-2 py-1 text-xs sm:text-sm">${p['Descripción']}</td><td class="border px-2 py-1 text-xs sm:text-sm text-right">$${formatMoney(p['Precio Neto'])}</td><td class="border px-2 py-1 text-xs sm:text-sm"><input id="${qtyId}" type="number" min="1" value="1" class="w-12 p-1 border rounded text-xs"/></td><td class="border px-2 py-1 text-center"><button onclick="addToQuote('${p['Clave MPRO']}')" class="px-2 py-1 bg-green-500 text-white rounded text-xs">+</button></td>`; tb.appendChild(tr); }); }
-
-    function updatePagination(){ const total=Math.ceil(filtered.length/pageSize)||1; document.getElementById('page-info').textContent=`Página ${currentPage} de ${total}`; document.getElementById('prev-page').disabled=currentPage===1; document.getElementById('next-page').disabled=currentPage===total; }
-
-    function changePage(delta){ currentPage+=delta; renderTable(); updatePagination(); }
-    function addToQuote(c){ const prod=products.find(p=>p['Clave MPRO']===c), qty=parseInt(document.getElementById(`qty-${c}`).value)||1, ex=quote.find(i=>i.producto['Clave MPRO']===c); if(ex) ex.qty+=qty; else quote.push({producto:prod,qty}); renderQuote(); }
-    function removeFromQuote(c){ quote=quote.filter(i=>i.producto['Clave MPRO']!==c); renderQuote(); }
-    function updateQuoteQty(c,v){ const it=quote.find(i=>i.producto['Clave MPRO']===c); if(it){it.qty=parseInt(v)||1;renderQuote();}} 
-    function renderQuote(){ const tb=document.getElementById('quote-body'); tb.innerHTML=''; let sub=0; quote.forEach(it=>{ const u=it.producto['Precio Neto']*(1-discountPercent/100), ln=u*it.qty; sub+=ln; const tr=document.createElement('tr'); tr.innerHTML=`<td class="border px-2 py-1 text-xs sm:text-sm">${it.producto['Clave MPRO']}</td><td class="border px-2 py-1 text-xs sm:text-sm text-center"><input type="number" min="1" value="${it.qty}" class="w-12 p-1 border rounded text-xs mx-auto" onchange="updateQuoteQty('${it.producto['Clave MPRO']}',this.value)"/></td><td class="border px-2 py-1 text-xs sm:text-sm text-right">$${formatMoney(ln)}</td><td class="border px-2 py-1 text-xs sm:text-sm text-center"><button onclick="removeFromQuote('${it.producto['Clave MPRO']}')" class="px-1 py-0.5 bg-red-600 text-white rounded text-xs">x</button></td>`; tb.appendChild(tr); }); const iva=sub*IVA_RATE; document.getElementById('quote-subtotal').textContent=formatMoney(sub); document.getElementById('quote-iva').textContent=formatMoney(iva); document.getElementById('quote-total').textContent=formatMoney(sub+iva); }
-
-    function sendWhatsApp(){ const num=document.getElementById('whatsapp-number').value.replace(/\D+/g,''); if(!num||!quote.length)return; const cli=document.getElementById('client-name').value||'Cliente', dt=document.getElementById('quote-date').value; let msg=`Cotización TPS\nCliente: ${cli}\nFecha: ${dt}\n----------------\n`; quote.forEach(it=>{ const u=it.producto['Precio Neto']*(1-discountPercent/100); msg+=`${it.qty} x ${it.producto['Descripción']} (${it.producto['Clave MPRO']}) @ $${formatMoney(u)}\n`; }); msg+=`----------------\nSubtotal: $${document.getElementById('quote-subtotal').textContent}\nIVA: $${document.getElementById('quote-iva').textContent}\nTotal: $${document.getElementById('quote-total').textContent}`; window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`,'_blank'); }
-
-    function generatePDF(){ const tpl=document.getElementById('pdf-template'), rows=document.getElementById('pdf-rows'); rows.innerHTML=''; let sub=0; quote.forEach(it=>{ const u=it.producto['Precio Neto']*(1-discountPercent/100), ln=u*it.qty; sub+=ln; rows.innerHTML+=`<tr><td class="border px-1 py-1">${it.producto['Clave MPRO']}</td><td class="border px-1 py-1">${it.producto['Descripción']}</td><td class="border px-1 py-1 text-center">${it.qty}</td><td class="border px-1 py-1 text-right">PZ</td><td class="border px-1 py-1 text-right">$${u.toLocaleString('es-MX',{minimumFractionDigits:2})}</td><td class="border px-1 py-1 text-right">${discountPercent.toFixed(0)}%</td><td class="border px-1 py-1 text-right">$${ln.toLocaleString('es-MX',{minimumFractionDigits:2})}</td></tr>`; }); const iva=sub*IVA_RATE; document.getElementById('pdf-subtotal').textContent=sub.toLocaleString('es-MX',{minimumFractionDigits:2}); document.getElementById('pdf-iva').textContent=iva.toLocaleString('es-MX',{minimumFractionDigits:2}); document.getElementById('pdf-total').textContent=(sub+iva).toLocaleString('es-MX',{minimumFractionDigits:2}); document.getElementById('pdf-client-whatsapp').textContent=document.getElementById('whatsapp-number').value; document.getElementById('pdf-client-date').textContent=document.getElementById('quote-date').value; document.getElementById('pdf-folio').textContent=document.getElementById('folio').value; document.getElementById('pdf-referencia').textContent=document.getElementById('referencia').value; document.getElementById('pdf-operador').textContent=document.getElementById('operador').value; document.getElementById('pdf-comentario').textContent=document.getElementById('comentario').value; document.getElementById('pdf-leyenda').textContent=new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN'}).format(sub+iva).replace('$','').trim(); tpl.classList.remove('hidden'); html2pdf().from(tpl).set({margin:0.5, filename:`Cotización_${document.getElementById('cliente').value||'Cliente'}_${document.getElementById('quote-date').value}.pdf`, html2canvas:{scale:2}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).save().finally(()=>tpl.classList.add('hidden')); }
-  </script>
-</body>
-</html>
+    function renderTable() {
+      const tbody = document.getElementById('products-body');
+      tbody.innerHTML = '';
+      filtered.slice((currentPage-1)*pageSize, currentPage*pageSize).forEach(p => {
+        const qtyId = `qty-${p['Clave MPRO']}`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="border px-2 py-1">${p['Clave MPRO']}</td>
+          <td class="border px-2 py-1">${p['Descripción']}</td>
+          <td class="border px-2 py-1 text-right">$${formatMoney(p['Precio Neto'])}</td>
+          <td class="border px-2 py-1"><input id="${qtyId}" type="number" min="1" value="1" class="w-12 p-1 border rounded" /></td>
+          <td class="border px-2 py-1 text-center"><button onclick="addToQuote('${p['Clave MPRO']}')" class="bg-green-500 text-white px-2 py-1 rounded">+</button></td>
+        `;
+        tbody.appendChild(tr);\...
