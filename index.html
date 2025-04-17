@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Cotizador TPS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
@@ -14,173 +14,122 @@
       <!-- CATÁLOGO -->
       <div class="lg:col-span-2 bg-white p-4 sm:p-6 rounded shadow">
         <h1 class="text-2xl font-bold mb-4">Catálogo de Productos</h1>
-        <div class="grid grid-cols-2 gap-4 mb-6">
-          <input id="filter-clave" type="text" placeholder="Filtrar por Clave" class="border p-2 rounded text-sm" disabled />
-          <input id="filter-descripcion" type="text" placeholder="Filtrar por Descripción" class="border p-2 rounded text-sm" disabled />
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <input id="f-clave"   placeholder="Filtrar por clave"       class="border p-2 rounded text-sm" disabled>
+          <input id="f-desc"    placeholder="Filtrar por descripción" class="border p-2 rounded text-sm" disabled>
         </div>
         <div class="overflow-x-auto rounded border">
           <table class="min-w-full table-auto text-xs sm:text-sm">
             <thead class="bg-blue-800 text-white">
-              <tr>
-                <th class="px-2 py-1">Clave</th>
-                <th class="px-2 py-1">Descripción</th>
-                <th class="px-2 py-1 text-right">Precio</th>
-                <th class="px-2 py-1">Cant.</th>
-                <th class="px-2 py-1">Añadir</th>
-              </tr>
+              <tr><th class="px-2 py-1">Clave</th><th class="px-2 py-1">Descripción</th><th class="px-2 py-1 text-right">Precio</th><th class="px-2 py-1">Cant.</th><th class="px-2 py-1">Añadir</th></tr>
             </thead>
-            <tbody id="products-body"></tbody>
+            <tbody id="tbl-prod"></tbody>
           </table>
         </div>
-        <div class="mt-4 flex justify-center space-x-2 text-xs sm:text-sm">
-          <button id="prev-page" class="px-3 py-1 bg-gray-300 rounded" disabled>Anterior</button>
-          <span id="page-info" class="px-3 py-1"></span>
-          <button id="next-page" class="px-3 py-1 bg-gray-300 rounded" disabled>Siguiente</button>
+        <div class="flex justify-center space-x-2 mt-2 text-xs">
+          <button id="btn-prev" class="px-3 py-1 bg-gray-300 rounded" disabled>Anterior</button>
+          <span id="pager" class="px-3 py-1"></span>
+          <button id="btn-next" class="px-3 py-1 bg-gray-300 rounded" disabled>Siguiente</button>
         </div>
       </div>
+
       <!-- COTIZACIÓN -->
-      <div class="bg-white p-4 sm:p-6 rounded shadow flex flex-col lg:sticky lg:top-4 lg:h-max" id="quotation-container">
+      <div id="box-quote" class="bg-white p-4 sm:p-6 rounded shadow lg:sticky lg:top-4 flex flex-col">
         <h2 class="text-xl font-bold mb-4">Resumen de Cotización</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
-          <input id="client-name" class="border p-2 rounded" placeholder="Nombre del cliente">
-          <input id="quote-date" type="date" class="border p-2 rounded">
-          <input id="whatsapp-number" class="border p-2 rounded" placeholder="WhatsApp (521...)">
-          <input id="folio" class="border p-2 rounded" placeholder="Folio">
-          <input id="referencia" class="border p-2 rounded" placeholder="Referencia">
-          <input id="operador" class="border p-2 rounded" placeholder="Operador">
+          <input id="q-nombre"  class="border p-2 rounded" placeholder="Nombre del cliente"/>
+          <input id="q-fecha"   type="date" class="border p-2 rounded"/>
+          <input id="q-wa"      class="border p-2 rounded" placeholder="WhatsApp (521...)"/>
+          <input id="q-folio"   class="border p-2 rounded" placeholder="Folio"/>
+          <input id="q-ref"     class="border p-2 rounded" placeholder="Referencia"/>
+          <input id="q-op"      class="border p-2 rounded" placeholder="Operador"/>
         </div>
-        <textarea id="comentario" rows="2" class="border p-2 rounded text-sm mb-4" placeholder="Comentario"></textarea>
-        <div class="mb-4 text-sm">
-          <label class="font-semibold mr-2" for="price-level">Nivel de precio:</label>
-          <select id="price-level" class="border p-2 rounded text-sm">
+        <textarea id="q-coment" rows="2" class="border p-2 rounded text-sm mb-4" placeholder="Comentario"></textarea>
+        <div class="mb-3 text-sm">
+          <label class="font-semibold mr-2" for="q-nivel">Nivel de precio:</label>
+          <select id="q-nivel" class="border p-2 rounded text-sm">
             <option value="0">Público</option>
             <option value="15">Sub‑distribuidor (‑15%)</option>
             <option value="20">Distribuidor (‑20%)</option>
           </select>
         </div>
-        <div class="overflow-y-auto max-h-60 border rounded mb-4 text-xs sm:text-sm">
+        <div class="overflow-y-auto max-h-60 border rounded mb-4 text-xs">
           <table class="min-w-full table-auto">
-            <thead class="bg-gray-200 sticky top-0">
-              <tr>
-                <th class="px-1 py-1">Clave</th>
-                <th class="px-1 py-1">Cant.</th>
-                <th class="px-1 py-1 text-right">Subtotal</th>
-                <th class="px-1 py-1">Quitar</th>
-              </tr>
-            </thead>
-            <tbody id="quote-body"></tbody>
+            <thead class="bg-gray-200 sticky top-0"><tr><th class="px-1 py-1">Clave</th><th class="px-1 py-1">Cant.</th><th class="px-1 py-1 text-right">Subtotal</th><th class="px-1 py-1">Quitar</th></tr></thead>
+            <tbody id="tbl-quote"></tbody>
           </table>
         </div>
         <div class="mb-4 text-right text-sm font-bold space-y-1">
-          <div>Subtotal: $<span id="quote-subtotal">0.00</span></div>
-          <div>IVA 16%: $<span id="quote-iva">0.00</span></div>
-          <div>Total: $<span id="quote-total">0.00</span></div>
+          <div>Subtotal: $<span id="q-sub">0.00</span></div>
+          <div>IVA 16%: $<span id="q-iva">0.00</span></div>
+          <div>Total: $<span id="q-tot">0.00</span></div>
         </div>
         <div class="flex space-x-2">
-          <button id="send-whatsapp" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm">Enviar WhatsApp</button>
-          <button id="generate-pdf" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded text-sm">Generar PDF</button>
+          <button id="btn-wa"  class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm">Enviar WhatsApp</button>
+          <button id="btn-pdf" class="flex-1 bg-blue-600  hover:bg-blue-700  text-white py-2 rounded text-sm">Generar PDF</button>
         </div>
       </div>
     </div>
   </div>
 
   <!-- PLANTILLA PDF (oculta) -->
-  <div id="pdf-template" class="hidden p-4 bg-white text-[9px]" style="width:210mm;font-family:Arial, sans-serif;">
+  <div id="tpl-pdf" class="hidden p-4 text-[9px] bg-white" style="width:210mm;font-family:Arial, sans-serif;">
     <div class="flex justify-between mb-2">
-      <img src="logo-tps.png" style="height:60px">
+      <img src="logo-tps.png" style="height:60px"/>
       <div class="text-right">
         <div class="text-2xl font-bold">COTIZACIÓN</div>
         Tecnología en Pinturas TPS<br>RFC: TPS030405175<br>+52 (999) 156 43 42
       </div>
     </div>
     <div class="grid grid-cols-2 gap-4 mb-1">
-      <div>
-        <strong>ATENCIÓN:</strong> <span id="pdf-client-whatsapp"></span><br>
-        <strong>RFC Cliente:</strong> <span id="pdf-client-rfc"></span><br>
-        <strong>DIRECCIÓN:</strong> <span id="pdf-client-dir"></span>
-      </div>
-      <div class="text-right">
-        <strong>FOLIO:</strong> <span id="pdf-folio"></span><br>
-        <strong>REFERENCIA:</strong> <span id="pdf-referencia"></span><br>
-        <strong>FECHA:</strong> <span id="pdf-client-date"></span><br>
-        <strong>OPERADOR:</strong> <span id="pdf-operador"></span>
-      </div>
+      <div><strong>ATENCIÓN:</strong> <span id="pdf-wa"></span><br><strong>RFC Cliente:</strong> <span id="pdf-rfc"></span><br><strong>DIRECCIÓN:</strong> <span id="pdf-dir"></span></div>
+      <div class="text-right"><strong>FOLIO:</strong> <span id="pdf-folio"></span><br><strong>REFERENCIA:</strong> <span id="pdf-ref"></span><br><strong>FECHA:</strong> <span id="pdf-fecha"></span><br><strong>OPERADOR:</strong> <span id="pdf-op"></span></div>
     </div>
-    <div class="mb-1"><strong>COMENTARIO:</strong> <span id="pdf-comentario"></span></div>
+    <div class="mb-1"><strong>COMENTARIO:</strong> <span id="pdf-coment"></span></div>
     <table class="w-full border-collapse mb-2">
-      <thead class="bg-gray-200">
-        <tr>
-          <th class="border px-1 py-1">Clave</th>
-          <th class="border px-1 py-1">Descripción</th>
-          <th class="border px-1 py-1 text-right">Cant.</th>
-          <th class="border px-1 py-1 text-right">Precio</th>
-          <th class="border px-1 py-1 text-right">%Desc</th>
-          <th class="border px-1 py-1 text-right">Importe</th>
-        </tr>
-      </thead>
+      <thead class="bg-gray-200"><tr><th class="border px-1 py-1">Clave</th><th class="border px-1 py-1">Descripción</th><th class="border px-1 py-1 text-right">Cant.</th><th class="border px-1 py-1 text-right">Precio</th><th class="border px-1 py-1 text-right">%Desc</th><th class="border px-1 py-1 text-right">Importe</th></tr></thead>
       <tbody id="pdf-rows"></tbody>
       <tfoot>
-        <tr><td colspan="5" class="border px-1 py-1 text-right"><strong>SUB‑TOTAL:</strong></td><td class="border px-1 py-1 text-right" id="pdf-subtotal"></td></tr>
+        <tr><td colspan="5" class="border px-1 py-1 text-right"><strong>SUB‑TOTAL:</strong></td><td class="border px-1 py-1 text-right" id="pdf-sub"></td></tr>
         <tr><td colspan="5" class="border px-1 py-1 text-right"><strong>IMPUESTOS:</strong></td><td class="border px-1 py-1 text-right" id="pdf-iva"></td></tr>
-        <tr><td colspan="5" class="border px-1 py-1 text-right"><strong>TOTAL:</strong></td><td class="border px-1 py-1 text-right" id="pdf-total"></td></tr>
+        <tr><td colspan="5" class="border px-1 py-1 text-right"><strong>TOTAL:</strong></td><td class="border px-1 py-1 text-right" id="pdf-tot"></td></tr>
       </tfoot>
     </table>
     <div class="text-[8px] mt-1"><strong>SON:</strong> <span id="pdf-leyenda"></span></div>
   </div>
 
 <script>
-const IVA = 0.16;
-let products=[], filtered=[], quote=[];
-const pageSize=10; let current=1, discount=0;
+const IVA=0.16,pageSize=10;let products=[],filtered=[],quote=[],page=1,disc=0;
+const $=id=>document.getElementById(id);
 
-// ----------- CARGA CSV -----------
 window.addEventListener('DOMContentLoaded',()=>{
-  Papa.parse('Lista%20estandar%20Raul.csv',{
-    download:true,
-    header:true,
-    dynamicTyping:false,
-    complete:r=>{
-      const cols=r.meta.fields.map(h=>h.toLowerCase());
-      products=r.data.filter(row=>row[cols[0]]).map(row=>({
-        clave:(row['producto']||row['clave mpro']||'').toString().trim(),
-        desc :(row['Descripción']||row['descripcion']||row['descripcion ']||'').trim(),
-        precio:parseFloat(String(row['Precio Neto']||row['precio']||row['precio neto']).replace(/,/g,''))||0
-      }));
-      filtered=[...products];
-      initUI();
-    },
-    error:e=>console.error('CSV error',e)
+  Papa.parse('https://raw.githubusercontent.com/raulancona/cotizadortps/main/Lista%20estandar%20Raul.csv',{
+    download:true,header:true,skipEmptyLines:true,
+    complete:r=>{const norm=h=>h.toLowerCase().replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i').replace(/ó/g,'o').replace(/ú/g,'u').trim();
+      products=r.data.map(o=>({
+        clave:(o['producto']||o['clave mpro']||o['codigo']||'').toString().trim(),
+        desc :(o['Descripción']||o['descripcion']||o[' descripcion']||'').trim(),
+        precio:parseFloat(String(o['Precio Neto']||o['precio']||o['precio lista']||'0').replace(/[^0-9.]/g,'')||0)
+      })).filter(p=>p.clave && p.desc);
+      filtered=[...products]; init();}
   });
 });
 
-function initUI(){
-  ['filter-clave','filter-descripcion','prev-page','next-page'].forEach(id=>document.getElementById(id).disabled=false);
-  document.getElementById('price-level').addEventListener('change',e=>{discount=parseFloat(e.target.value);renderQuote();});
-  document.getElementById('filter-clave').addEventListener('input',filter);
-  document.getElementById('filter-descripcion').addEventListener('input',filter);
-  document.getElementById('prev-page').addEventListener('click',()=>page(-1));
-  document.getElementById('next-page').addEventListener('click',()=>page(1));
-  document.getElementById('generate-pdf').addEventListener('click',makePDF);
-  renderTable(); pager();
-}
+function init(){['f-clave','f-desc','btn-prev','btn-next'].forEach(id=>$ (id).disabled=false);
+  $('f-clave').oninput=apply; $('f-desc').oninput=apply; $('btn-prev').onclick=()=>chg(-1); $('btn-next').onclick=()=>chg(1);
+  $('q-nivel').onchange=e=>{disc=parseFloat(e.target.value); renderQuote();}; $('btn-pdf').onclick=makePDF; renderTable(); updPager();}
 
-function filter(){current=1; const c=document.getElementById('filter-clave').value.toLowerCase(), d=document.getElementById('filter-descripcion').value.toLowerCase(); filtered=products.filter(p=>p.clave.toLowerCase().includes(c)&&p.desc.toLowerCase().includes(d)); renderTable(); pager();}
-
-function page(d){current+=d; renderTable(); pager();}
-function pager(){const t=Math.max(1,Math.ceil(filtered.length/pageSize)); document.getElementById('page-info').textContent=`Página ${current} de ${t}`; document.getElementById('prev-page').disabled=current===1; document.getElementById('next-page').disabled=current===t;}
-
+function apply(){page=1; const c=$('f-clave').value.toLowerCase(),d=$('f-desc').value.toLowerCase(); filtered=products.filter(p=>p.clave.includes(c)&&p.desc.toLowerCase().includes(d)); renderTable(); updPager();}
+function chg(d){page+=d; renderTable(); updPager();}
+function updPager(){const t=Math.max(1,Math.ceil(filtered.length/pageSize)); $('pager').textContent=`Página ${page} de ${t}`; $('btn-prev').disabled=page===1; $('btn-next').disabled=page===t;}
 function money(v){return v.toLocaleString('es-MX',{minimumFractionDigits:2});}
-function renderTable(){const tb=document.getElementById('products-body'); tb.innerHTML=''; filtered.slice((current-1)*pageSize,current*pageSize).forEach(p=>{const id=`qty-${p.clave}`; tb.innerHTML+=`<tr><td class='border px-2 py-1'>${p.clave}</td><td class='border px-2 py-1'>${p.desc}</td><td class='border px-2 py-1 text-right'>$${money(p.precio)}</td><td class='border px-2 py-1'><input id='${id}' type='number' min='1' value='1' class='w-12 border rounded p-1'></td><td class='border px-2 py-1 text-center'><button class='bg-green-500 text-white px-2 rounded' onclick="add('${p.clave}')">+</button></td></tr>`;});}
-
-function add(clave){const p=products.find(x=>x.clave===clave);const qty=parseInt(document.getElementById(`qty-${clave}`).value)||1;const ex=quote.find(q=>q.clave===clave);ex?ex.qty+=qty:quote.push({...p,qty}); renderQuote();}
-function del(clave){quote=quote.filter(q=>q.clave!==clave); renderQuote();}
-function qtyChange(clave,val){const q=quote.find(x=>x.clave===clave); if(q){q.qty=parseInt(val)||1; renderQuote();}}
-
-function renderQuote(){const tb=document.getElementById('quote-body'); tb.innerHTML=''; let sub=0; quote.forEach(q=>{const unit=q.precio*(1-discount/100); const line=unit*q.qty; sub+=line; tb.innerHTML+=`<tr><td class='border px-1 py-1'>${q.clave}</td><td class='border px-1 py-1 text-center'><input type='number' min='1' value='${q.qty}' class='w-12 border rounded p-1' onchange="qtyChange('${q.clave}',this.value)"></td><td class='border px-1 py-1 text-right'>$${money(line)}</td><td class='border px-1 py-1 text-center'><button class='bg-red-600 text-white px-1 rounded' onclick="del('${q.clave}')">x</button></td></tr>`;}); const iva=sub*IVA; document.getElementById('quote-subtotal').textContent=money(sub); document.getElementById('quote-iva').textContent=money(iva); document.getElementById('quote-total').textContent=money(sub+iva);}  
-
-function makePDF(){if(!quote.length){alert('Agrega productos');return;} const tpl=document.getElementById('pdf-template'); const rows=document.getElementById('pdf-rows'); rows.innerHTML=''; let sub=0; quote.forEach(q=>{const unit=q.precio*(1-discount/100),line=unit*q.qty; sub+=line; rows.innerHTML+=`<tr><td class='border px-1 py-1'>${q.clave}</td><td class='border px-1 py-1'>${q.desc}</td><td class='border px-1 py-1 text-right'>${q.qty}</td><td class='border px-1 py-1 text-right'>$${money(unit)}</td><td class='border px-1 py-1 text-right'>${discount}%</td><td class='border px-1 py-1 text-right'>$${money(line)}</td></tr>`;}); const iva=sub*IVA; document.getElementById('pdf-subtotal').textContent=money(sub); document.getElementById('pdf-iva').textContent=money(iva); document.getElementById('pdf-total').textContent=money(sub+iva);
-  document.getElementById('pdf-client-whatsapp').textContent=document.getElementById('whatsapp-number').value; document.getElementById('pdf-folio').textContent=document.getElementById('folio').value; document.getElementById('pdf-referencia').textContent=document.getElementById('referencia').value; document.getElementById('pdf-operador').textContent=document.getElementById('operador').value; document.getElementById('pdf-client-date').textContent=document.getElementById('quote-date').value; document.getElementById('pdf-comentario').textContent=document.getElementById('comentario').value; document.getElementById('pdf-leyenda').textContent=`${money(sub+iva)} M.N.`;
-  tpl.classList.remove('hidden'); html2pdf().from(tpl).set({margin:0.5,filename:`Cotizacion_${document.getElementById('client-name').value||'Cliente'}_${document.getElementById('quote-date').value}.pdf`,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).save().finally(()=>tpl.classList.add('hidden'));}
+function renderTable(){const tb=$('tbl-prod');tb.innerHTML=''; filtered.slice((page-1)*pageSize,page*pageSize).forEach(p=>{const id=`qty-${p.clave}`; tb.innerHTML+=`<tr><td class='border px-2 py-1'>${p.clave}</td><td class='border px-2 py-1'>${p.desc}</td><td class='border px-2 py-1 text-right'>$${money(p.precio)}</td><td class='border px-2 py-1'><input id='${id}' type='number' value='1' min='1' class='w-12 border rounded p-1'></td><td class='border px-2 py-1 text-center'><button class='bg-green-500 text-white px-2 rounded' onclick="add('${p.clave}')">+</button></td></tr>`;});}
+function add(cl){const p=products.find(x=>x.clave===cl); const n=parseInt($("qty-"+cl).value)||1; const e=quote.find(q=>q.clave===cl); e?e.qty+=n:quote.push({...p,qty:n}); renderQuote();}
+function del(cl){quote=quote.filter(q=>q.clave!==cl); renderQuote();}
+function qty(cl,v){const q=quote.find(x=>x.clave===cl); if(q){q.qty=parseInt(v)||1; renderQuote();}}
+function renderQuote(){const tb=$('tbl-quote'); tb.innerHTML=''; let sub=0; quote.forEach(q=>{const u=q.precio*(1-disc/100),line=u*q.qty; sub+=line; tb.innerHTML+=`<tr><td class='border px-1 py-1'>${q.clave}</td><td class='border px-1 py-1 text-center'><input type='number' value='${q.qty}' min='1' class='w-12 border rounded p-1' onchange="qty('${q.clave}',this.value)"></td><td class='border px-1 py-1 text-right'>$${money(line)}</td><td class='border px-1 py-1 text-center'><button class='bg-red-600 text-white px-1 rounded' onclick="del('${q.clave}')">x</button></td></tr>`;}); const iva=sub*IVA; $('q-sub').textContent=money(sub); $('q-iva').textContent=money(iva); $('q-tot').textContent=money(sub+iva);}
+function makePDF(){if(!quote.length){alert('Añade productos');return;} const rows=$('pdf-rows'); rows.innerHTML=''; let sub=0; quote.forEach(q=>{const u=q.precio*(1-disc/100),line=u*q.qty; sub+=line;rows.innerHTML+=`<tr><td class='border px-1 py-1'>${q.clave}</td><td class='border px-1 py-1'>${q.desc}</td><td class='border px-1 py-1 text-right'>${q.qty}</td><td class='border px-1 py-1 text-right'>$${money(u)}</td><td class='border px-1 py-1 text-right'>${disc}%</td><td class='border px-1 py-1 text-right'>$${money(line)}</td></tr>`;}); const iva=sub*IVA; $('pdf-sub').textContent=money(sub); $('pdf-iva').textContent=money(iva); $('pdf-tot').textContent=money(sub+iva);
+  $('pdf-wa').textContent=$('q-wa').value; $('pdf-folio').textContent=$('q-folio').value; $('pdf-ref').textContent=$('q-ref').value; $('pdf-op').textContent=$('q-op').value; $('pdf-fecha').textContent=$('q-fecha').value; $('pdf-coment').textContent=$('q-coment').value; $('pdf-leyenda').textContent=`${money(sub+iva)} M.N.`;
+  $('tpl-pdf').classList.remove('hidden'); html2pdf().from($('tpl-pdf')).set({margin:0.5,filename:`Cotizacion_${$('q-nombre').value||'Cliente'}_${$('q-fecha').value}.pdf`,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).save().finally(()=>$('tpl-pdf').classList.add('hidden'));}
 </script>
-</body>
-</html>
+</body></html>
