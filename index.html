@@ -1,135 +1,275 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Cotizador TPS</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TPS – Cotizador</title>
+  <!-- TailwindCSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+  <!-- pdfmake -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
 </head>
-<body class="bg-gray-100 p-4">
-  <div class="max-w-7xl mx-auto">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- CATÁLOGO -->
-      <div class="lg:col-span-2 bg-white p-4 sm:p-6 rounded shadow">
-        <h1 class="text-2xl font-bold mb-4">Catálogo de Productos</h1>
-        <div class="grid grid-cols-2 gap-4 mb-4">
-          <input id="f-clave"   placeholder="Filtrar por clave"       class="border p-2 rounded text-sm" disabled>
-          <input id="f-desc"    placeholder="Filtrar por descripción" class="border p-2 rounded text-sm" disabled>
-        </div>
-        <div class="overflow-x-auto rounded border">
-          <table class="min-w-full table-auto text-xs sm:text-sm">
-            <thead class="bg-blue-800 text-white">
-              <tr><th class="px-2 py-1">Clave</th><th class="px-2 py-1">Descripción</th><th class="px-2 py-1 text-right">Precio</th><th class="px-2 py-1">Cant.</th><th class="px-2 py-1">Añadir</th></tr>
-            </thead>
-            <tbody id="tbl-prod"></tbody>
-          </table>
-        </div>
-        <div class="flex justify-center space-x-2 mt-2 text-xs">
-          <button id="btn-prev" class="px-3 py-1 bg-gray-300 rounded" disabled>Anterior</button>
-          <span id="pager" class="px-3 py-1"></span>
-          <button id="btn-next" class="px-3 py-1 bg-gray-300 rounded" disabled>Siguiente</button>
-        </div>
+<body class="bg-gray-100 min-h-screen p-4">
+  <h1 class="text-2xl font-bold mb-4 text-center text-sky-700">Cotizador TPS</h1>
+  <div class="grid md:grid-cols-3 gap-4">
+    <!-- Catálogo -->
+    <section class="md:col-span-2 bg-white shadow rounded-xl p-4">
+      <h2 class="text-lg font-semibold mb-2">Catálogo de Productos</h2>
+      <div id="errorMsg" class="text-red-600 text-sm mb-2 hidden"></div>
+      <div class="flex gap-2 mb-3">
+        <input id="filterClave" type="text" placeholder="Filtrar por Clave/Producto" class="w-1/2 border rounded p-2" />
+        <input id="filterDesc" type="text" placeholder="Filtrar por Descripción" class="w-1/2 border rounded p-2" />
+      </div>
+      <div class="overflow-x-auto max-h-[420px]">
+        <table class="w-full text-sm border">
+          <thead>
+            <tr class="bg-sky-700 text-white">
+              <th class="p-2">Producto</th>
+              <th class="p-2">Descripción</th>
+              <th class="p-2">Precio</th>
+              <th class="p-2">Añadir</th>
+            </tr>
+          </thead>
+          <tbody id="productBody" class="divide-y"></tbody>
+        </table>
+      </div>
+      <!-- Paginación -->
+      <div class="flex justify-center items-center gap-2 mt-3">
+        <button id="prevPage" class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">&lt;</button>
+        <span id="pageInfo" class="text-sm"></span>
+        <button id="nextPage" class="px-3 py-1 bg-gray-200 rounded disabled:opacity-50">&gt;</button>
+      </div>
+    </section>
+
+    <!-- Resumen de Cotización -->
+    <section class="bg-white shadow rounded-xl p-4 flex flex-col">
+      <h2 class="text-lg font-semibold mb-2">Resumen de Cotización</h2>
+      <div class="space-y-2 mb-2 overflow-y-auto max-h-60 pr-2">
+        <input id="cliente" class="w-full border rounded p-2" placeholder="Nombre del cliente" />
+        <input id="fecha" type="date" class="w-full border rounded p-2" />
+        <input id="whatsapp" class="w-full border rounded p-2" placeholder="WhatsApp (Ej: 529991234...)" />
+        <input id="folio" class="w-full border rounded p-2" placeholder="Folio (Opcional)" />
+        <textarea id="comentario" rows="2" class="w-full border rounded p-2" placeholder="Comentario (Opcional)"></textarea>
+      </div>
+      <!-- Nivel de precio -->
+      <label class="text-sm font-medium mb-1" for="nivelPrecio">Nivel de precio:</label>
+      <select id="nivelPrecio" class="border rounded p-2 mb-3">
+        <option value="0">Público (0%)</option>
+        <option value="0.15">Sub‑distribuidor (15% desc.)</option>
+        <option value="0.20">Distribuidor (20% desc.)</option>
+      </select>
+
+      <!-- Tabla de cotización -->
+      <div class="overflow-x-auto flex-1">
+        <table class="w-full text-xs border">
+          <thead>
+            <tr class="bg-sky-700 text-white">
+              <th class="p-1">#</th><th class="p-1">Producto</th><th class="p-1">Desc.</th><th class="p-1">Cant</th><th class="p-1">UM</th><th class="p-1">P Unit</th><th class="p-1">Importe</th>
+            </tr>
+          </thead>
+          <tbody id="cartBody" class="divide-y text-center">
+            <tr><td colspan="7" class="p-2 italic text-gray-500">Añade productos…</td></tr>
+          </tbody>
+        </table>
       </div>
 
-      <!-- COTIZACIÓN -->
-      <div id="box-quote" class="bg-white p-4 sm:p-6 rounded shadow lg:sticky lg:top-4 flex flex-col">
-        <h2 class="text-xl font-bold mb-4">Resumen de Cotización</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
-          <input id="q-nombre"  class="border p-2 rounded" placeholder="Nombre del cliente"/>
-          <input id="q-fecha"   type="date" class="border p-2 rounded"/>
-          <input id="q-wa"      class="border p-2 rounded" placeholder="WhatsApp (521...)"/>
-          <input id="q-folio"   class="border p-2 rounded" placeholder="Folio"/>
-          <input id="q-ref"     class="border p-2 rounded" placeholder="Referencia"/>
-          <input id="q-op"      class="border p-2 rounded" placeholder="Operador"/>
-        </div>
-        <textarea id="q-coment" rows="2" class="border p-2 rounded text-sm mb-4" placeholder="Comentario"></textarea>
-        <div class="mb-3 text-sm">
-          <label class="font-semibold mr-2" for="q-nivel">Nivel de precio:</label>
-          <select id="q-nivel" class="border p-2 rounded text-sm">
-            <option value="0">Público</option>
-            <option value="15">Sub‑distribuidor (‑15%)</option>
-            <option value="20">Distribuidor (‑20%)</option>
-          </select>
-        </div>
-        <div class="overflow-y-auto max-h-60 border rounded mb-4 text-xs">
-          <table class="min-w-full table-auto">
-            <thead class="bg-gray-200 sticky top-0"><tr><th class="px-1 py-1">Clave</th><th class="px-1 py-1">Cant.</th><th class="px-1 py-1 text-right">Subtotal</th><th class="px-1 py-1">Quitar</th></tr></thead>
-            <tbody id="tbl-quote"></tbody>
-          </table>
-        </div>
-        <div class="mb-4 text-right text-sm font-bold space-y-1">
-          <div>Subtotal: $<span id="q-sub">0.00</span></div>
-          <div>IVA 16%: $<span id="q-iva">0.00</span></div>
-          <div>Total: $<span id="q-tot">0.00</span></div>
-        </div>
-        <div class="flex space-x-2">
-          <button id="btn-wa"  class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded text-sm">Enviar WhatsApp</button>
-          <button id="btn-pdf" class="flex-1 bg-blue-600  hover:bg-blue-700  text-white py-2 rounded text-sm">Generar PDF</button>
-        </div>
+      <!-- Totales -->
+      <div class="text-right mt-2 space-y-1 text-sm">
+        <div>Subtotal: <span id="subTotal">$0.00</span></div>
+        <div>IVA (16%): <span id="iva">$0.00</span></div>
+        <div class="font-semibold text-lg">Total: <span id="total">$0.00</span></div>
       </div>
-    </div>
-  </div>
 
-  <!-- PLANTILLA PDF (oculta) -->
-  <div id="tpl-pdf" class="hidden p-4 text-[9px] bg-white" style="width:210mm;font-family:Arial, sans-serif;">
-    <div class="flex justify-between mb-2">
-      <img src="logo-tps.png" style="height:60px"/>
-      <div class="text-right">
-        <div class="text-2xl font-bold">COTIZACIÓN</div>
-        Tecnología en Pinturas TPS<br>RFC: TPS030405175<br>+52 (999) 156 43 42
+      <!-- Acciones -->
+      <div class="flex gap-2 mt-4">
+        <button id="btnWhats" class="flex-1 bg-green-500 hover:bg-green-600 text-white rounded p-2">WhatsApp</button>
+        <button id="btnPDF" class="flex-1 bg-sky-600 hover:bg-sky-700 text-white rounded p-2">Generar PDF</button>
       </div>
-    </div>
-    <div class="grid grid-cols-2 gap-4 mb-1">
-      <div><strong>ATENCIÓN:</strong> <span id="pdf-wa"></span><br><strong>RFC Cliente:</strong> <span id="pdf-rfc"></span><br><strong>DIRECCIÓN:</strong> <span id="pdf-dir"></span></div>
-      <div class="text-right"><strong>FOLIO:</strong> <span id="pdf-folio"></span><br><strong>REFERENCIA:</strong> <span id="pdf-ref"></span><br><strong>FECHA:</strong> <span id="pdf-fecha"></span><br><strong>OPERADOR:</strong> <span id="pdf-op"></span></div>
-    </div>
-    <div class="mb-1"><strong>COMENTARIO:</strong> <span id="pdf-coment"></span></div>
-    <table class="w-full border-collapse mb-2">
-      <thead class="bg-gray-200"><tr><th class="border px-1 py-1">Clave</th><th class="border px-1 py-1">Descripción</th><th class="border px-1 py-1 text-right">Cant.</th><th class="border px-1 py-1 text-right">Precio</th><th class="border px-1 py-1 text-right">%Desc</th><th class="border px-1 py-1 text-right">Importe</th></tr></thead>
-      <tbody id="pdf-rows"></tbody>
-      <tfoot>
-        <tr><td colspan="5" class="border px-1 py-1 text-right"><strong>SUB‑TOTAL:</strong></td><td class="border px-1 py-1 text-right" id="pdf-sub"></td></tr>
-        <tr><td colspan="5" class="border px-1 py-1 text-right"><strong>IMPUESTOS:</strong></td><td class="border px-1 py-1 text-right" id="pdf-iva"></td></tr>
-        <tr><td colspan="5" class="border px-1 py-1 text-right"><strong>TOTAL:</strong></td><td class="border px-1 py-1 text-right" id="pdf-tot"></td></tr>
-      </tfoot>
-    </table>
-    <div class="text-[8px] mt-1"><strong>SON:</strong> <span id="pdf-leyenda"></span></div>
+    </section>
   </div>
 
 <script>
-const IVA=0.16,pageSize=10;let products=[],filtered=[],quote=[],page=1,disc=0;
-const $=id=>document.getElementById(id);
+// ----------------- Configuración -----------------
+const CSV_URL = 'https://raw.githubusercontent.com/raulancona/cotizadortps/main/Lista%20estandar%20Raul.csv';
+const ROWS_PER_PAGE = 10;
+let products = [];
+let filtered = [];
+let currentPage = 1;
+let cart = [];
 
-window.addEventListener('DOMContentLoaded',()=>{
-  Papa.parse('https://raw.githubusercontent.com/raulancona/cotizadortps/main/Lista%20estandar%20Raul.csv',{
-    download:true,header:true,skipEmptyLines:true,
-    complete:r=>{const norm=h=>h.toLowerCase().replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i').replace(/ó/g,'o').replace(/ú/g,'u').trim();
-      products=r.data.map(o=>({
-        clave:(o['producto']||o['clave mpro']||o['codigo']||'').toString().trim(),
-        desc :(o['Descripción']||o['descripcion']||o[' descripcion']||'').trim(),
-        precio:parseFloat(String(o['Precio Neto']||o['precio']||o['precio lista']||'0').replace(/[^0-9.]/g,'')||0)
-      })).filter(p=>p.clave && p.desc);
-      filtered=[...products]; init();}
+// -------------- Utilidades ----------------
+const formato = num => num.toLocaleString('es-MX', {style:'currency', currency:'MXN'});
+function calcularPrecios() {
+  const descuento = parseFloat(document.getElementById('nivelPrecio').value);
+  cart.forEach(it => {
+    it.descuento = descuento;
+    it.precioUnitDesc = it.precio * (1 - descuento);
+    it.importe = it.precioUnitDesc * it.cantidad;
   });
-});
+  renderCart();
+}
 
-function init(){['f-clave','f-desc','btn-prev','btn-next'].forEach(id=>$ (id).disabled=false);
-  $('f-clave').oninput=apply; $('f-desc').oninput=apply; $('btn-prev').onclick=()=>chg(-1); $('btn-next').onclick=()=>chg(1);
-  $('q-nivel').onchange=e=>{disc=parseFloat(e.target.value); renderQuote();}; $('btn-pdf').onclick=makePDF; renderTable(); updPager();}
+function renderCart() {
+  const tbody = document.getElementById('cartBody');
+  tbody.innerHTML = '';
+  if (cart.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="p-2 italic text-gray-500">Añade productos…</td></tr>';
+    document.getElementById('subTotal').textContent = formato(0);
+    document.getElementById('iva').textContent = formato(0);
+    document.getElementById('total').textContent = formato(0);
+    return;
+  }
+  cart.forEach((it, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="p-1">${idx+1}</td>
+      <td class="p-1">${it.producto}</td>
+      <td class="p-1 text-left">${it.descripcion}</td>
+      <td class="p-1"><input type="number" min="1" class="w-14 border rounded p-0.5 text-center" value="${it.cantidad}" data-idx="${idx}" /></td>
+      <td class="p-1">PZA</td>
+      <td class="p-1">${formato(it.precioUnitDesc)}</td>
+      <td class="p-1">${formato(it.importe)}</td>`;
+    tbody.appendChild(tr);
+  });
+  // Eventos de cantidad
+  tbody.querySelectorAll('input[type=number]').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const i = +e.target.dataset.idx;
+      cart[i].cantidad = Math.max(1, +e.target.value);
+      calularPrecios();
+    });
+  });
+  const sub = cart.reduce((s, it) => s + it.importe, 0);
+  document.getElementById('subTotal').textContent = formato(sub);
+  const iva = sub * 0.16;
+  document.getElementById('iva').textContent = formato(iva);
+  document.getElementById('total').textContent = formato(sub + iva);
+}
 
-function apply(){page=1; const c=$('f-clave').value.toLowerCase(),d=$('f-desc').value.toLowerCase(); filtered=products.filter(p=>p.clave.includes(c)&&p.desc.toLowerCase().includes(d)); renderTable(); updPager();}
-function chg(d){page+=d; renderTable(); updPager();}
-function updPager(){const t=Math.max(1,Math.ceil(filtered.length/pageSize)); $('pager').textContent=`Página ${page} de ${t}`; $('btn-prev').disabled=page===1; $('btn-next').disabled=page===t;}
-function money(v){return v.toLocaleString('es-MX',{minimumFractionDigits:2});}
-function renderTable(){const tb=$('tbl-prod');tb.innerHTML=''; filtered.slice((page-1)*pageSize,page*pageSize).forEach(p=>{const id=`qty-${p.clave}`; tb.innerHTML+=`<tr><td class='border px-2 py-1'>${p.clave}</td><td class='border px-2 py-1'>${p.desc}</td><td class='border px-2 py-1 text-right'>$${money(p.precio)}</td><td class='border px-2 py-1'><input id='${id}' type='number' value='1' min='1' class='w-12 border rounded p-1'></td><td class='border px-2 py-1 text-center'><button class='bg-green-500 text-white px-2 rounded' onclick="add('${p.clave}')">+</button></td></tr>`;});}
-function add(cl){const p=products.find(x=>x.clave===cl); const n=parseInt($("qty-"+cl).value)||1; const e=quote.find(q=>q.clave===cl); e?e.qty+=n:quote.push({...p,qty:n}); renderQuote();}
-function del(cl){quote=quote.filter(q=>q.clave!==cl); renderQuote();}
-function qty(cl,v){const q=quote.find(x=>x.clave===cl); if(q){q.qty=parseInt(v)||1; renderQuote();}}
-function renderQuote(){const tb=$('tbl-quote'); tb.innerHTML=''; let sub=0; quote.forEach(q=>{const u=q.precio*(1-disc/100),line=u*q.qty; sub+=line; tb.innerHTML+=`<tr><td class='border px-1 py-1'>${q.clave}</td><td class='border px-1 py-1 text-center'><input type='number' value='${q.qty}' min='1' class='w-12 border rounded p-1' onchange="qty('${q.clave}',this.value)"></td><td class='border px-1 py-1 text-right'>$${money(line)}</td><td class='border px-1 py-1 text-center'><button class='bg-red-600 text-white px-1 rounded' onclick="del('${q.clave}')">x</button></td></tr>`;}); const iva=sub*IVA; $('q-sub').textContent=money(sub); $('q-iva').textContent=money(iva); $('q-tot').textContent=money(sub+iva);}
-function makePDF(){if(!quote.length){alert('Añade productos');return;} const rows=$('pdf-rows'); rows.innerHTML=''; let sub=0; quote.forEach(q=>{const u=q.precio*(1-disc/100),line=u*q.qty; sub+=line;rows.innerHTML+=`<tr><td class='border px-1 py-1'>${q.clave}</td><td class='border px-1 py-1'>${q.desc}</td><td class='border px-1 py-1 text-right'>${q.qty}</td><td class='border px-1 py-1 text-right'>$${money(u)}</td><td class='border px-1 py-1 text-right'>${disc}%</td><td class='border px-1 py-1 text-right'>$${money(line)}</td></tr>`;}); const iva=sub*IVA; $('pdf-sub').textContent=money(sub); $('pdf-iva').textContent=money(iva); $('pdf-tot').textContent=money(sub+iva);
-  $('pdf-wa').textContent=$('q-wa').value; $('pdf-folio').textContent=$('q-folio').value; $('pdf-ref').textContent=$('q-ref').value; $('pdf-op').textContent=$('q-op').value; $('pdf-fecha').textContent=$('q-fecha').value; $('pdf-coment').textContent=$('q-coment').value; $('pdf-leyenda').textContent=`${money(sub+iva)} M.N.`;
-  $('tpl-pdf').classList.remove('hidden'); html2pdf().from($('tpl-pdf')).set({margin:0.5,filename:`Cotizacion_${$('q-nombre').value||'Cliente'}_${$('q-fecha').value}.pdf`,html2canvas:{scale:2},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}}).save().finally(()=>$('tpl-pdf').classList.add('hidden'));}
+// ---------------- Productos ----------------
+function renderProducts() {
+  const tbody = document.getElementById('productBody');
+  tbody.innerHTML = '';
+  const start = (currentPage-1)*ROWS_PER_PAGE;
+  const pageItems = filtered.slice(start, start + ROWS_PER_PAGE);
+  pageItems.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="p-1">${p.producto}</td>
+      <td class="p-1 text-left">${p.descripcion}</td>
+      <td class="p-1 text-right">${formato(p.precio)}</td>
+      <td class="p-1 text-center"><button class="bg-sky-600 hover:bg-sky-700 text-white rounded px-2 py-1 text-xs" data-prod="${p.producto}">+</button></td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('pageInfo').textContent = `Página ${currentPage} / ${Math.max(1, Math.ceil(filtered.length/ROWS_PER_PAGE))}`;
+  document.getElementById('prevPage').disabled = currentPage === 1;
+  document.getElementById('nextPage').disabled = currentPage >= Math.ceil(filtered.length/ROWS_PER_PAGE);
+  // Añadir eventos
+  tbody.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => addToCart(btn.dataset.prod));
+  });
+}
+
+function filterProducts() {
+  const clave = document.getElementById('filterClave').value.toLowerCase();
+  const desc = document.getElementById('filterDesc').value.toLowerCase();
+  filtered = products.filter(p =>
+    (!clave || p.producto.toLowerCase().includes(clave)) &&
+    (!desc || p.descripcion.toLowerCase().includes(desc))
+  );
+  currentPage = 1;
+  renderProducts();
+}
+
+function addToCart(prodKey) {
+  const item = products.find(p => p.producto === prodKey);
+  const exists = cart.find(c => c.producto === prodKey);
+  if (exists) { exists.cantidad += 1; } else {
+    cart.push({ ...item, cantidad: 1, descuento: 0, precioUnitDesc: item.precio, importe: item.precio });
+  }
+  calularPrecios();
+}
+
+function loadCSV() {
+  Papa.parse(CSV_URL, {
+    download: true,
+    header: true,
+    complete: res => {
+      products = res.data.filter(r => r.producto);
+      // Limpieza & casting
+      products = products.map(r => ({
+        producto: r['producto'].trim(),
+        descripcion: (r['Descripción ']||'').trim(),
+        precio: parseFloat((r[' Precio ']||'0').replace(/,/g,'').trim()) || 0
+      }));
+      filtered = [...products];
+      renderProducts();
+    },
+    error: err => {
+      document.getElementById('errorMsg').textContent = 'Error al cargar productos: '+err.message;
+      document.getElementById('errorMsg').classList.remove('hidden');
+    }
+  });
+}
+
+// ---------------- PDF ----------------
+function generarPDF() {
+  if (cart.length === 0) { alert('Agrega productos primero'); return; }
+  const fecha = document.getElementById('fecha').value || new Date().toISOString().substring(0,10);
+  const cliente = document.getElementById('cliente').value || 'Cliente';
+  const comentario = document.getElementById('comentario').value;
+  const bodyTable = [
+    [{text:'Producto', bold:true}, {text:'Descripción', bold:true}, {text:'Cant', bold:true}, {text:'Precio', bold:true}, {text:'Total', bold:true}]
+  ];
+  cart.forEach(it => bodyTable.push([it.producto, it.descripcion, it.cantidad+'', formato(it.precioUnitDesc), formato(it.importe)]));
+  const sub = cart.reduce((s,c)=>s+c.importe,0);
+  const iva = sub*0.16;
+  const total = sub+iva;
+  const docDef = {
+    pageMargins:[40,60,40,60],
+    content:[
+      {image:'', width:100, alignment:'left', margin:[0,0,0,10]}, // logo — cargar base64 si quieres
+      {text:`COTIZACIÓN`, style:'header'},
+      {columns:[
+        {width:'*', text:`FECHA: ${fecha}\nCLIENTE: ${cliente}`},
+        {width:'*', text:`Ven. TPS\nFolio: ${document.getElementById('folio').value||'-'}`}
+      ], margin:[0,0,0,10]},
+      comentario? {text:'DESCRIPCIÓN DEL PROYECTO:\n'+comentario, margin:[0,0,0,10]} : {},
+      {table:{headerRows:1, widths:['*','*','auto','auto','auto'], body:bodyTable}},
+      {text:`\nSubtotal: ${formato(sub)}\nIVA (16%): ${formato(iva)}\nTOTAL: ${formato(total)}`, alignment:'right', margin:[0,10,0,0]},
+      {text:'\nCotización válida por 30 días', italics:true, fontSize:9}
+    ],
+    styles:{header:{fontSize:16,bold:true,alignment:'right'}}
+  };
+  pdfMake.createPdf(docDef).download(`Cotizacion_${cliente}.pdf`);
+}
+
+// --------------- WhatsApp ---------------
+function shareWhats() {
+  if (cart.length === 0) { alert('Agrega productos primero'); return; }
+  const total = document.getElementById('total').textContent;
+  const tel = document.getElementById('whatsapp').value.trim();
+  const msg = encodeURIComponent(`¡Hola! Aquí está tu cotización por ${total}. Si tienes dudas avísame.`);
+  const url = `https://wa.me/${tel}?text=${msg}`;
+  window.open(url,'_blank');
+}
+
+// -------------- Eventos Init -------------
+document.getElementById('filterClave').addEventListener('input', filterProducts);
+document.getElementById('filterDesc').addEventListener('input', filterProducts);
+document.getElementById('prevPage').addEventListener('click',()=>{currentPage--;renderProducts();});
+document.getElementById('nextPage').addEventListener('click',()=>{currentPage++;renderProducts();});
+document.getElementById('nivelPrecio').addEventListener('change',calcularPrecios);
+document.getElementById('btnPDF').addEventListener('click',generarPDF);
+document.getElementById('btnWhats').addEventListener('click',shareWhats);
+
+// Autocompletar fecha hoy
+if(!document.getElementById('fecha').value){document.getElementById('fecha').value=new Date().toISOString().substring(0,10);} 
+// Cargar productos
+loadCSV();
 </script>
-</body></html>
+</body>
+</html>
